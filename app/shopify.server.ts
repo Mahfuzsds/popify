@@ -5,18 +5,23 @@ import {
   DeliveryMethod,
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
-import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 import { restResources } from "@shopify/shopify-api/rest/admin/2024-04";
-import prisma from "./db.server";
+import connectToMongoDB from "./db.server";
+import { MongoDBSessionStorage } from "@shopify/shopify-app-session-storage-mongodb"; // Hypothetical package, check for actual availability or implement custom logic
+
+await connectToMongoDB();
 
 const shopify = shopifyApp({
-  apiKey: process.env.SHOPIFY_API_KEY,
+  apiKey: process.env.SHOPIFY_API_KEY || "",
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
   apiVersion: ApiVersion.April24,
-  scopes: process.env.SCOPES?.split(","),
+  scopes: process.env.SCOPES?.split(",") || [],
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma),
+  sessionStorage: new MongoDBSessionStorage(
+    new URL(process.env.MONGODB_URI || "mongodb://localhost:27017"),
+    "popify",
+  ),
   distribution: AppDistribution.AppStore,
   restResources,
   webhooks: {
@@ -27,7 +32,7 @@ const shopify = shopifyApp({
   },
   hooks: {
     afterAuth: async ({ session }) => {
-      shopify.registerWebhooks({ session });
+      await shopify.registerWebhooks({ session });
     },
   },
   future: {
@@ -36,9 +41,9 @@ const shopify = shopifyApp({
     v3_lineItemBilling: true,
     unstable_newEmbeddedAuthStrategy: true,
   },
-  ...(process.env.SHOP_CUSTOM_DOMAIN
-    ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }
-    : {}),
+  ...(process.env.SHOP_CUSTOM_DOMAIN && {
+    customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN],
+  }),
 });
 
 export default shopify;

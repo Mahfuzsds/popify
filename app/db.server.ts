@@ -1,15 +1,23 @@
-import { PrismaClient } from "@prisma/client";
+import mongoose from "mongoose";
 
-declare global {
-  var prisma: PrismaClient;
-}
+const MONGODB_URI =
+  process.env.MONGODB_URI || "mongodb://localhost:27017/popify";
 
-const prisma: PrismaClient = global.prisma || new PrismaClient();
-
-if (process.env.NODE_ENV !== "production") {
-  if (!global.prisma) {
-    global.prisma = new PrismaClient();
+const connectToMongoDB = async () => {
+  if (mongoose.connection.readyState >= 1) {
+    return;
   }
-}
 
-export default prisma;
+  try {
+    await mongoose.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("Connected to MongoDB");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+    throw error;
+  }
+};
+
+export default connectToMongoDB;
