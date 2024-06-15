@@ -11,10 +11,8 @@
     "env": "shopify app env",
     "start": "remix-serve ./build/server/index.js",
     "docker-start": "npm run setup && npm run start",
-    "setup": "prisma generate && prisma migrate deploy",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "shopify": "shopify",
-    "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
     "vite": "vite"
   },
@@ -23,7 +21,6 @@
     "node": ">=16.0.0 <22.0.0"
   },
   "dependencies": {
-    "@prisma/client": "^5.11.0",
     "@remix-run/dev": "^2.7.1",
     "@remix-run/node": "^2.7.1",
     "@remix-run/react": "^2.7.1",
@@ -32,13 +29,11 @@
     "@shopify/polaris": "^12.0.0",
     "@shopify/shopify-api": "^10.0.0",
     "@shopify/shopify-app-remix": "^2.8.2",
-    "@shopify/shopify-app-session-storage-prisma": "^4.0.5",
     "@shopify/shopify-app-session-storage-mongodb": "^0.0.1-security",
     "connect-mongodb-session": "^2.2.0",
     "isbot": "^5.1.0",
     "mongodb": "^6.7.0",
     "mongoose": "^8.4.1",
-    "prisma": "^5.11.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "vite-tsconfig-paths": "^4.3.1"
