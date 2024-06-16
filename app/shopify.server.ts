@@ -4,12 +4,16 @@ import {
   AppDistribution,
   DeliveryMethod,
   shopifyApp,
+  BillingInterval,
 } from "@shopify/shopify-app-remix/server";
 import { restResources } from "@shopify/shopify-api/rest/admin/2024-04";
 import connectToMongoDB from "./db.server";
 import { MongoDBSessionStorage } from "@shopify/shopify-app-session-storage-mongodb"; // Hypothetical package, check for actual availability or implement custom logic
 
 await connectToMongoDB();
+
+export const MONTHLY_PLAN = "Monthly subscription";
+export const ANNUAL_PLAN = "Annual subscription";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
@@ -40,6 +44,18 @@ const shopify = shopifyApp({
     v3_authenticatePublic: true,
     v3_lineItemBilling: true,
     unstable_newEmbeddedAuthStrategy: true,
+  },
+  billing: {
+    [MONTHLY_PLAN]: {
+      amount: 5,
+      currencyCode: "USD",
+      interval: BillingInterval.Every30Days,
+    },
+    [ANNUAL_PLAN]: {
+      amount: 50,
+      currencyCode: "USD",
+      interval: BillingInterval.Annual,
+    },
   },
   ...(process.env.SHOP_CUSTOM_DOMAIN && {
     customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN],

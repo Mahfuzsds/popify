@@ -1,83 +1,125 @@
 import {
   Box,
-  Card,
-  Layout,
-  Link,
-  List,
   Page,
   Text,
+  InlineGrid,
+  Button,
   BlockStack,
 } from "@shopify/polaris";
 import { TitleBar } from "@shopify/app-bridge-react";
+import { LoaderFunctionArgs, redirect, json } from "@remix-run/node";
+import { authenticate, MONTHLY_PLAN } from "../shopify.server";
+import { randomFunction } from "./subscriptions";
+import { useLoaderData } from "@remix-run/react";
 
-export default function ContactPage() {
-  return (
-    <Page>
-      <TitleBar title="Plans page" />
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <Text as="p" variant="bodyMd">
-                The app templasdasdaate comes with an additional page which
-                demonstrates how to create multiple pages within app navigation
-                using{" "}
-                <Link
-                  url="https://shopify.dev/docs/apps/tools/app-bridge"
-                  target="_blank"
-                  removeUnderline
-                >
-                  App Bridge
-                </Link>
-                .
-              </Text>
-              <Text as="p" variant="bodyMd">
-                To create your own page and have it show up in the app
-                navigation, add a page inside <Code>app/routes</Code>, and a
-                link to it in the <Code>&lt;NavMenu&gt;</Code> component found
-                in <Code>app/routes/app.jsx</Code>.
-              </Text>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-        <Layout.Section variant="oneThird">
-          <Card>
-            <BlockStack gap="200">
-              <Text as="h2" variant="headingMd">
-                Resources
-              </Text>
-              <List>
-                <List.Item>
-                  <Link
-                    url="https://shopify.dev/docs/apps/design-guidelines/navigation#app-nav"
-                    target="_blank"
-                    removeUnderline
-                  >
-                    App nav best practices
-                  </Link>
-                </List.Item>
-              </List>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
-  );
+// ================ Get the active subscription plan
+
+// export const loader = async ({ request }: LoaderFunctionArgs) => {
+//   const { admin } = await authenticate.admin(request);
+//   const response = await admin.graphql(
+//     `query shopInfo {
+//       shop {
+//         name
+//       }
+//       app {
+//           installation {
+//             launchUrl
+//             activeSubscriptions {
+//               id
+//               name
+//               createdAt
+//               returnUrl
+//               status
+//               currentPeriodEnd
+//               trialDays
+//             }
+//           }
+//         }
+//     }`,
+//   );
+//   const parsedResponse = await response.json();
+//   console.log(parsedResponse.data.app.installation.activeSubscriptions[0].name);
+//   return { data: parsedResponse.data };
+// };
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const { billing } = await authenticate.admin(request);
+  // const billingCheck = await billing.require({
+  //   plans: [MONTHLY_PLAN],
+  //   onFailure: async () => billing.request({ plan: MONTHLY_PLAN }),
+  // });
+  try {
+    console.log("try");
+    const billingCheck = await billing.require({
+      plans: [MONTHLY_PLAN],
+
+      onFailure: async () => {
+        throw new Error("No active plan");
+      },
+    });
+    const subscription = billingCheck.appSubscriptions[0];
+    console.log(`shop is on ${subscription.name} (id ${subscription.id})`);
+
+    // const enabledSubscription = await billing.request({ plan: MONTHLY_PLAN });
+
+    // const cancelledSubscription = await billing.cancel({
+    //   subscriptionId: subscription.id,
+    //   isTest: true,
+    //   prorate: true,
+    // });
+
+    return json({ billing, plan: subscription });
+  } catch (error) {
+    console.log("catch");
+    return json({ billing, plan: { name: "Free" } });
+  }
 }
 
-function Code({ children }: { children: React.ReactNode }) {
+export default function Plans() {
+  // const { plan } = useLoaderData();
+  // console.log(plan);
+
   return (
-    <Box
-      as="span"
-      padding="025"
-      paddingInlineStart="100"
-      paddingInlineEnd="100"
-      background="bg-surface-active"
-      borderWidth="025"
-      borderColor="border"
-      borderRadius="100"
-    >
-      <code>{children}</code>
-    </Box>
+    <Page>
+      <TitleBar title="Plan page" />
+      <InlineGrid gap="400" columns={3}>
+        <Box padding="600" background="bg-fill">
+          <BlockStack gap="400">
+            <Text as="p" variant="headingLg">
+              Free user
+            </Text>
+            <Box>
+              <Button disabled={true} onClick={() => randomFunction("test")}>
+                Select
+              </Button>
+            </Box>
+          </BlockStack>
+        </Box>
+        <Box padding="600" background="bg-fill">
+          <BlockStack gap="400">
+            <Text as="p" variant="headingLg">
+              Upgrade to monthly plan
+            </Text>
+            <Box>
+              <Button variant="primary" onClick={() => randomFunction("test")}>
+                Select
+              </Button>
+            </Box>
+          </BlockStack>
+        </Box>
+        <Box padding="600" background="bg-fill">
+          <BlockStack gap="200">
+            <Text as="p" variant="headingLg">
+              Upgrade to anual plan
+            </Text>
+            <Box>
+              <Button variant="primary" url="../upgrade">
+                Select
+              </Button>
+            </Box>
+          </BlockStack>
+        </Box>
+      </InlineGrid>
+    </Page>
   );
 }
