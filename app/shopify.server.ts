@@ -20,7 +20,7 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new MongoDBSessionStorage(
     new URL(process.env.MONGODB_URI || "mongodb://localhost:27017"),
-    "popify",
+    "pretty_poppers",
   ),
   distribution: AppDistribution.AppStore,
   restResources,
