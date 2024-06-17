@@ -9,8 +9,9 @@ import {
 import { TitleBar } from "@shopify/app-bridge-react";
 import { LoaderFunctionArgs, redirect, json } from "@remix-run/node";
 import { authenticate, MONTHLY_PLAN } from "../shopify.server";
-import { randomFunction } from "./subscriptions";
+import { billingCheck, randomFunction } from "./subscriptions";
 import { useLoaderData } from "@remix-run/react";
+import { useEffect } from "react";
 
 // ================ Get the active subscription plan
 
@@ -52,7 +53,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     console.log("try");
     const billingCheck = await billing.require({
       plans: [MONTHLY_PLAN],
-
       onFailure: async () => {
         throw new Error("No active plan");
       },
@@ -67,7 +67,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     //   isTest: true,
     //   prorate: true,
     // });
-
     return json({ billing, plan: subscription });
   } catch (error) {
     console.log("catch");
@@ -75,9 +74,32 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 }
 
+// Function to create a subscription
+async function createSubscription(request: Request) {
+  const { billing } = await authenticate.admin(request);
+  const billingCheck = await billing.require({
+    plans: [MONTHLY_PLAN],
+    onFailure: async () => billing.request({ plan: MONTHLY_PLAN }),
+  });
+
+  console.log("Subscription created or validated:", billingCheck);
+}
+
+// Function to cancel a subscription
+async function cancelSubscription(request: Request, subscriptionId: string) {
+  const { billing } = await authenticate.admin(request);
+
+  const cancelledSubscription = await billing.cancel({
+    subscriptionId: subscriptionId,
+    isTest: true,
+    prorate: true,
+  });
+
+  console.log("Subscription cancelled:", cancelledSubscription);
+}
 export default function Plans() {
-  // const { plan } = useLoaderData();
-  // console.log(plan);
+  const { plan } = useLoaderData();
+  console.log(plan.name);
 
   return (
     <Page>
@@ -89,7 +111,10 @@ export default function Plans() {
               Free user
             </Text>
             <Box>
-              <Button disabled={true} onClick={() => randomFunction("test")}>
+              <Button
+                disabled={false}
+                onClick={() => createSubscription("Migrate to monthly")}
+              >
                 Select
               </Button>
             </Box>
