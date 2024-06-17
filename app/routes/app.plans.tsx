@@ -10,7 +10,7 @@ import { TitleBar } from "@shopify/app-bridge-react";
 import { LoaderFunctionArgs, redirect, json } from "@remix-run/node";
 import { authenticate, MONTHLY_PLAN } from "../shopify.server";
 import { billingCheck, randomFunction } from "./subscriptions";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, useNavigate } from "@remix-run/react";
 import { useEffect } from "react";
 
 // ================ Get the active subscription plan
@@ -43,37 +43,6 @@ import { useEffect } from "react";
 //   return { data: parsedResponse.data };
 // };
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { billing } = await authenticate.admin(request);
-  // const billingCheck = await billing.require({
-  //   plans: [MONTHLY_PLAN],
-  //   onFailure: async () => billing.request({ plan: MONTHLY_PLAN }),
-  // });
-  try {
-    console.log("try");
-    const billingCheck = await billing.require({
-      plans: [MONTHLY_PLAN],
-      onFailure: async () => {
-        throw new Error("No active plan");
-      },
-    });
-    const subscription = billingCheck.appSubscriptions[0];
-    console.log(`shop is on ${subscription.name} (id ${subscription.id})`);
-
-    // const enabledSubscription = await billing.request({ plan: MONTHLY_PLAN });
-
-    // const cancelledSubscription = await billing.cancel({
-    //   subscriptionId: subscription.id,
-    //   isTest: true,
-    //   prorate: true,
-    // });
-    return json({ billing, plan: subscription });
-  } catch (error) {
-    console.log("catch");
-    return json({ billing, plan: { name: "Free" } });
-  }
-}
-
 // Function to create a subscription
 async function createSubscription(request: Request) {
   const { billing } = await authenticate.admin(request);
@@ -86,65 +55,55 @@ async function createSubscription(request: Request) {
 }
 
 // Function to cancel a subscription
-async function cancelSubscription(request: Request, subscriptionId: string) {
+async function cancelSubscription(request: Request) {
   const { billing } = await authenticate.admin(request);
 
+  const billingCheck = await billing.require({
+    plans: [MONTHLY_PLAN],
+    onFailure: async () => {
+      throw new Error("No active plan");
+    },
+  });
+  const subscription = billingCheck.appSubscriptions[0];
+  console.log(`shop is on ${subscription.name} (id ${subscription.id})`);
+
   const cancelledSubscription = await billing.cancel({
-    subscriptionId: subscriptionId,
+    subscriptionId: subscription.id,
     isTest: true,
     prorate: true,
   });
 
   console.log("Subscription cancelled:", cancelledSubscription);
 }
+
+// Loader function
+export async function loader({ request }: LoaderFunctionArgs) {
+  const url = new URL(request.url);
+  const action = url.searchParams.get("action");
+
+  if (action === "create") {
+    await createSubscription(request);
+  } else if (action === "cancel") {
+    await cancelSubscription(request);
+  }
+  return {};
+}
+
 export default function Plans() {
-  const { plan } = useLoaderData();
-  console.log(plan.name);
+  const navigate = useNavigate();
+
+  const handleCreateSubscription = () => {
+    navigate("?action=create");
+  };
+
+  const handleCancelSubscription = () => {
+    navigate(`?action=cancel`);
+  };
 
   return (
-    <Page>
-      <TitleBar title="Plan page" />
-      <InlineGrid gap="400" columns={3}>
-        <Box padding="600" background="bg-fill">
-          <BlockStack gap="400">
-            <Text as="p" variant="headingLg">
-              Free user
-            </Text>
-            <Box>
-              <Button
-                disabled={false}
-                onClick={() => createSubscription("Migrate to monthly")}
-              >
-                Select
-              </Button>
-            </Box>
-          </BlockStack>
-        </Box>
-        <Box padding="600" background="bg-fill">
-          <BlockStack gap="400">
-            <Text as="p" variant="headingLg">
-              Upgrade to monthly plan
-            </Text>
-            <Box>
-              <Button variant="primary" onClick={() => randomFunction("test")}>
-                Select
-              </Button>
-            </Box>
-          </BlockStack>
-        </Box>
-        <Box padding="600" background="bg-fill">
-          <BlockStack gap="200">
-            <Text as="p" variant="headingLg">
-              Upgrade to anual plan
-            </Text>
-            <Box>
-              <Button variant="primary" url="../upgrade">
-                Select
-              </Button>
-            </Box>
-          </BlockStack>
-        </Box>
-      </InlineGrid>
-    </Page>
+    <div>
+      <button onClick={handleCreateSubscription}>Create Subscription</button>
+      <button onClick={handleCancelSubscription}>Cancel Subscription</button>
+    </div>
   );
 }
